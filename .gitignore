@@ -1,0 +1,12 @@
+# Build artifacts
+*.o
+load_balancer_sim
+
+# Runtime output
+load_balancer.log
+
+# Doxygen generated docs
+docs/
+
+# macOS metadata
+.DS_Store
