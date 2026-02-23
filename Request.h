@@ -1,7 +1,5 @@
-/**
- * @file Request.h
- * @brief Holds the Request struct used throughout the simulation.
- */
+// Request.h
+// struct that holds all info for one web request
 
 #ifndef REQUEST_H
 #define REQUEST_H
@@ -20,9 +18,6 @@ struct Request {
     int timeRequired;    // how many cycles to process
     char jobType;        // 'P' for processing, 'S' for streaming
 
-    /**
-     * @brief Default constructor.
-     */
     Request();
 
     /**
@@ -35,11 +30,7 @@ struct Request {
      */
     static Request randomRequest(int nextId, std::mt19937& generator, int minTime, int maxTime);
 
-    /**
-     * @brief Generates a random IPv4 address.
-     * @param generator RNG to use.
-     * @return IP address string like "192.168.1.1".
-     */
+    // helper to make a random IP like 192.168.1.1
     static std::string randomIp(std::mt19937& generator);
 };
 

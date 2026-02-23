@@ -1,14 +1,10 @@
-/**
- * @file WebServer.h
- * @brief WebServer class - each server handles one request at a time.
- */
+// WebServer.h
+// represents one web server - can only hold one request at a time
 
 #ifndef WEBSERVER_H
 #define WEBSERVER_H
 
-#include <memory>
 #include <string>
-
 #include "Request.h"
 
 /**
@@ -18,11 +14,8 @@
  */
 class WebServer {
 public:
-    /**
-     * @brief Constructor, give it an ID string.
-     * @param serverId Name/ID for this server.
-     */
-    explicit WebServer(const std::string& serverId);
+    WebServer(const std::string& serverId);
+    ~WebServer();
 
     /**
      * @brief Give this server a request to work on.
@@ -33,31 +26,21 @@ public:
 
     /**
      * @brief Called every clock cycle to count down the request timer.
-     * @return true if a request just finished.
+     * @return true if the request just finished.
      */
     bool processTick();
 
-    /**
-     * @brief Check if this server is free.
-     * @return true if no active request.
-     */
+    // returns true if server has no active request
     bool isAvailable() const;
 
-    /**
-     * @brief Returns the server's ID.
-     */
     std::string id() const;
-
-    /**
-     * @brief How many requests this server has finished.
-     */
     int completedCount() const;
 
 private:
     std::string serverId_;
     bool isBusy_;
     int remainingTime_;
-    std::unique_ptr<Request> currentRequest_;
+    Request* currentRequest_;   // raw pointer, we manage the memory
     int completedCount_;
 };
 

@@ -1,15 +1,12 @@
-/**
- * @file IPBlocker.h
- * @brief Blocks requests from certain IP ranges, acts like a basic firewall.
- */
+// IPBlocker.h
+// checks if an incoming IP is in a blocked range (acts as a basic firewall)
 
 #ifndef IPBLOCKER_H
 #define IPBLOCKER_H
 
-#include <cstdint>
 #include <string>
-#include <utility>
 #include <vector>
+#include <cstdint>
 
 /**
  * @class IPBlocker
@@ -41,10 +38,10 @@ public:
     bool isBlocked(const std::string& ip) const;
 
 private:
-    std::vector<std::string> blockedRanges_;
-    std::vector<std::pair<std::uint32_t, std::uint32_t>> parsedRanges_;
+    std::vector<std::string> blockedRanges_;                           // human-readable list
+    std::vector<std::pair<uint32_t, uint32_t>> parsedRanges_;         // numeric start/end pairs
 
-    static bool parseIp(const std::string& ip, std::uint32_t& value);
+    static bool parseIp(const std::string& ip, uint32_t& value);
 };
 
 #endif

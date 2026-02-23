@@ -1,10 +1,7 @@
-/**
- * @file Request.cpp
- * @brief Implementation of Request constructor and random generation helpers.
- */
+// Request.cpp
+// implements the Request struct methods
 
 #include "Request.h"
-
 #include <sstream>
 
 Request::Request() : id(0), ipIn("0.0.0.0"), ipOut("0.0.0.0"), timeRequired(0), jobType('P') {}
