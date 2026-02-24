@@ -1,0 +1,31 @@
+# Load balancer simulation configuration
+# Lines starting with # are comments.
+
+# Required core values (can be overridden in user prompt)
+initial_servers=10
+simulation_cycles=10000
+
+# Start queue size = initial_servers * initial_queue_multiplier
+initial_queue_multiplier=100
+
+# Dynamic scaling thresholds
+min_queue_per_server=50
+max_queue_per_server=80
+scaling_cooldown_cycles=25
+
+# Request generation
+min_request_time=1
+max_request_time=15
+arrival_probability_percent=65
+max_new_requests_per_cycle=2
+
+# Logging and status
+status_print_interval=500
+log_file=load_balancer.log
+
+# Optional deterministic seed (0 = random_device)
+seed=0
+
+# Firewall ranges (comma separated)
+# Supported forms: 192.168.1.1-192.168.1.200 or 10.0.0.0/8
+blocked_ranges=10.0.0.0/8,192.168.1.1-192.168.1.20
