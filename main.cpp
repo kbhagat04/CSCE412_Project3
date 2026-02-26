@@ -41,12 +41,12 @@ int main(int argc, char* argv[]) {
     }
 
     std::cout << "[INFO] Config loaded from: " << configPath << '\n';
-    std::cout << "[INFO] Blocked ranges loaded: " << config.blockedRanges.size() << '\n';
+    std::cout << "[INFO] Blocked ranges loaded: " << config.blockedRanges.size() << '\n' << '\n';
 
     LoadBalancer balancer(config, blocker);
     SimulationStats stats = balancer.run();
 
-    std::cout << "[INFO] ==== Simulation Summary ====\n";
+    std::cout << "\n[INFO] ==== Simulation Summary ====\n";
     std::cout << "[INFO] Generated requests: " << stats.generatedRequests << '\n';
     std::cout << "[INFO] Accepted requests: " << stats.acceptedRequests << '\n';
     std::cout << "[INFO] Blocked requests: " << stats.blockedRequests << '\n';

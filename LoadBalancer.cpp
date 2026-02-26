@@ -9,6 +9,7 @@
 // ANSI color codes for terminal output
 #define RESET  "\033[0m"
 #define CYAN   "\033[36m"
+#define GREEN  "\033[32m"
 #define YELLOW "\033[33m"
 #define RED    "\033[31m"
 
@@ -64,11 +65,21 @@ void LoadBalancer::addRequest(const Request& request) {
     stats_.generatedRequests++;
     if (ipBlocker_ != nullptr && ipBlocker_->isBlocked(request.ipIn)) {
         stats_.blockedRequests++;
+        writeLog("BLOCK", YELLOW, "Request #" + std::to_string(request.id) +
+                 " BLOCKED | src=" + request.ipIn +
+                 " dst=" + request.ipOut);
         return;
     }
 
     requestQueue_.push(request);
     stats_.acceptedRequests++;
+    // file-only: too noisy for terminal at high cycle counts
+    if (logFile_.is_open()) {
+        logFile_ << "[QUEUED] Request #" << request.id
+                 << " | " << request.ipIn << " -> " << request.ipOut
+                 << " | type=" << request.jobType
+                 << " time=" << request.timeRequired << '\n';
+    }
 }
 
 void LoadBalancer::processTick() {
@@ -80,6 +91,13 @@ void LoadBalancer::processTick() {
         if (server->isAvailable()) {
             Request next = requestQueue_.front();
             requestQueue_.pop();
+            // file-only dispatch log
+            if (logFile_.is_open()) {
+                logFile_ << "[ASSIGNED] Request #" << next.id
+                         << " -> server " << server->id()
+                         << " | " << next.ipIn << " -> " << next.ipOut
+                         << " | time=" << next.timeRequired << '\n';
+            }
             server->processRequest(&next);
         }
     }
@@ -106,16 +124,16 @@ void LoadBalancer::balanceLoad() {
         addServer();
         stats_.addedServers++;
         cooldownTimer_ = config_.scalingCooldownCycles;
-        logWarning("Cycle " + std::to_string(currentTime_) +
-                   ": queue above threshold, added 1 server (now " +
-                   std::to_string(servers_.size()) + ")");
+        writeLog("SCALE UP", GREEN, "Cycle " + std::to_string(currentTime_) +
+                 ": queue above threshold, added 1 server (now " +
+                 std::to_string(servers_.size()) + ")");
     } else if (queueSize < lowerThreshold && serverCount > 1) {
         if (removeServer()) {
             stats_.removedServers++;
             cooldownTimer_ = config_.scalingCooldownCycles;
-            logWarning("Cycle " + std::to_string(currentTime_) +
-                       ": queue below threshold, removed 1 server (now " +
-                       std::to_string(servers_.size()) + ")");
+            writeLog("SCALE DOWN", RED, "Cycle " + std::to_string(currentTime_) +
+                     ": queue below threshold, removed 1 server (now " +
+                     std::to_string(servers_.size()) + ")");
         }
     }
 }
@@ -138,10 +156,37 @@ bool LoadBalancer::removeServer() {
 
 SimulationStats LoadBalancer::run() {
     initializeServers();
-    fillInitialQueue();
 
+    // print banner BEFORE filling the queue so blocked warnings don't appear above it
     logEvent("Starting simulation for " + std::to_string(config_.simulationCycles) +
              " cycles with " + std::to_string(servers_.size()) + " server(s)");
+
+    if (!config_.blockedRanges.empty()) {
+        std::ostringstream ranges;
+        ranges << "Blocked IP ranges (" << config_.blockedRanges.size() << "): ";
+        for (int i = 0; i < (int)config_.blockedRanges.size(); i++) {
+            if (i > 0) ranges << ", ";
+            ranges << config_.blockedRanges[i];
+        }
+        logInfo(ranges.str());
+    }
+
+    fillInitialQueue();
+
+    logInfo("Initial queue: " + std::to_string(requestQueue_.size()) + " requests"
+            + " | generated=" + std::to_string(stats_.generatedRequests)
+            + " | blocked=" + std::to_string(stats_.blockedRequests)
+            + " | accepted=" + std::to_string(stats_.acceptedRequests));
+
+    // show queue capacity context so it's easy to see how full things are
+    int cap = (int)servers_.size() * config_.maxQueuePerServer;
+    int fillPct = cap > 0 ? (int)(requestQueue_.size() * 100 / cap) : 0;
+    logInfo("Queue capacity: " + std::to_string(cap)
+            + " (" + std::to_string(config_.maxQueuePerServer) + " per server)"
+            + " | fill=" + std::to_string(fillPct) + "%"
+            + "  [scale-up >" + std::to_string(config_.maxQueuePerServer)
+            + "/srv, scale-down <" + std::to_string(config_.minQueuePerServer) + "/srv]");
+    logInfo("--------------------------------------------------");
 
     for (int cycle = 1; cycle <= config_.simulationCycles; ++cycle) {
         currentTime_ = cycle;
@@ -154,15 +199,38 @@ SimulationStats LoadBalancer::run() {
         balanceLoad();
 
         if (config_.statusPrintInterval > 0 && cycle % config_.statusPrintInterval == 0) {
+            int capacity = (int)servers_.size() * config_.maxQueuePerServer;
+            int qsize = (int)requestQueue_.size();
+            int pct = capacity > 0 ? qsize * 100 / capacity : 0;
+
             std::ostringstream status;
-            status << "Cycle " << cycle << " | queue=" << requestQueue_.size()
-                   << " | servers=" << servers_.size() << " | completed=" << stats_.completedRequests;
+            status << "Cycle " << cycle << "/" << config_.simulationCycles
+                   << "  |  queue " << qsize << "/" << capacity << " (" << pct << "%)"
+                   << "  |  servers=" << servers_.size()
+                   << "  |  gen=" << stats_.generatedRequests
+                   << " blocked=" << stats_.blockedRequests
+                   << " done=" << stats_.completedRequests;
             logEvent(status.str());
         }
     }
 
     stats_.finalQueueSize = (int)requestQueue_.size();
     stats_.finalServerCount = (int)servers_.size();
+
+    // write end-of-simulation summary to the log file
+    if (logFile_.is_open()) {
+        logFile_ << "\n[INFO] ==== Simulation Summary ====\n";
+        logFile_ << "[INFO] Generated requests : " << stats_.generatedRequests  << '\n';
+        logFile_ << "[INFO] Accepted requests  : " << stats_.acceptedRequests   << '\n';
+        logFile_ << "[INFO] Blocked requests   : " << stats_.blockedRequests    << '\n';
+        logFile_ << "[INFO] Completed requests : " << stats_.completedRequests  << '\n';
+        logFile_ << "[INFO] Peak queue size    : " << stats_.peakQueueSize      << '\n';
+        logFile_ << "[INFO] Final queue size   : " << stats_.finalQueueSize     << '\n';
+        logFile_ << "[INFO] Servers added      : " << stats_.addedServers       << '\n';
+        logFile_ << "[INFO] Servers removed    : " << stats_.removedServers     << '\n';
+        logFile_ << "[INFO] Final server count : " << stats_.finalServerCount   << '\n';
+        logFile_ << "[INFO] Log file           : " << config_.logFilePath       << '\n';
+    }
 
     return stats_;
 }
