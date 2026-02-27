@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <iostream>
 #include <sstream>
+#include <iomanip>
 
 // ANSI color codes for terminal output
 #define RESET  "\033[0m"
@@ -124,16 +125,20 @@ void LoadBalancer::balanceLoad() {
         addServer();
         stats_.addedServers++;
         cooldownTimer_ = config_.scalingCooldownCycles;
-        writeLog("SCALE UP", GREEN, "Cycle " + std::to_string(currentTime_) +
-                 ": queue above threshold, added 1 server (now " +
-                 std::to_string(servers_.size()) + ")");
+        std::ostringstream msg;
+        msg << "Cycle " << currentTime_ << ": queue=" << queueSize
+            << " exceeded max threshold=" << upperThreshold
+            << ", added 1 server (now " << servers_.size() << ")";
+        writeLog("SCALE UP", GREEN, msg.str());
     } else if (queueSize < lowerThreshold && serverCount > 1) {
         if (removeServer()) {
             stats_.removedServers++;
             cooldownTimer_ = config_.scalingCooldownCycles;
-            writeLog("SCALE DOWN", RED, "Cycle " + std::to_string(currentTime_) +
-                     ": queue below threshold, removed 1 server (now " +
-                     std::to_string(servers_.size()) + ")");
+            std::ostringstream msg;
+            msg << "Cycle " << currentTime_ << ": queue=" << queueSize
+                << " below min threshold=" << lowerThreshold
+                << ", removed 1 server (now " << servers_.size() << ")";
+            writeLog("SCALE DOWN", RED, msg.str());
         }
     }
 }
@@ -254,14 +259,9 @@ void LoadBalancer::fillInitialQueue() {
 }
 
 void LoadBalancer::maybeAddNewRequests() {
-    std::uniform_int_distribution<int> chanceDist(1, 100);
-    std::uniform_int_distribution<int> countDist(1, std::max(1, config_.maxNewRequestsPerCycle));
-
-    if (chanceDist(generator_) <= config_.arrivalProbabilityPercent) {
-        int count = countDist(generator_);
-        for (int i = 0; i < count; ++i) {
-            addRequest(generateRequest());
-        }
+    // 50% chance each cycle to add one new request
+    if (rand() % 2 == 0) {
+        addRequest(generateRequest());
     }
 }
 

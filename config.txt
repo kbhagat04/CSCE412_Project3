@@ -16,8 +16,7 @@ scaling_cooldown_cycles=25
 # Request generation
 min_request_time=1
 max_request_time=15
-arrival_probability_percent=65
-max_new_requests_per_cycle=2
+
 
 # Logging and status
 status_print_interval=500

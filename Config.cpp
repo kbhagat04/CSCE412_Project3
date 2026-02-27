@@ -57,10 +57,6 @@ bool ConfigLoader::loadFromFile(const std::string& path, Config& config) {
             config.minRequestTime = std::stoi(val);
         } else if (key == "max_request_time") {
             config.maxRequestTime = std::stoi(val);
-        } else if (key == "arrival_probability_percent") {
-            config.arrivalProbabilityPercent = std::stoi(val);
-        } else if (key == "max_new_requests_per_cycle") {
-            config.maxNewRequestsPerCycle = std::stoi(val);
         } else if (key == "status_print_interval") {
             config.statusPrintInterval = std::stoi(val);
         } else if (key == "log_file") {
@@ -79,9 +75,7 @@ bool ConfigLoader::loadFromFile(const std::string& path, Config& config) {
     if (config.maxRequestTime < config.minRequestTime) {
         config.maxRequestTime = config.minRequestTime;
     }
-    if (config.maxNewRequestsPerCycle < 0) {
-        config.maxNewRequestsPerCycle = 0;
-    }
+    // no additional validation required
 
     return true;
 }

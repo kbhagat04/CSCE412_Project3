@@ -24,8 +24,6 @@ struct Config {
     int minRequestTime = 1;
     int maxRequestTime = 15;
 
-    int arrivalProbabilityPercent = 65;
-    int maxNewRequestsPerCycle = 2;
 
     int statusPrintInterval = 500;
     std::string logFilePath = "load_balancer.log";
