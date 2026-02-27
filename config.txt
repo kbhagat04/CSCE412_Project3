@@ -1,5 +1,4 @@
 # Load balancer simulation configuration
-# Lines starting with # are comments.
 
 # Required core values (can be overridden in user prompt)
 initial_servers=10
@@ -8,9 +7,7 @@ simulation_cycles=10000
 # Start queue size = initial_servers * initial_queue_multiplier
 initial_queue_multiplier=100
 
-# Dynamic scaling thresholds
-min_queue_per_server=50
-max_queue_per_server=80
+# Dynamic scaling
 scaling_cooldown_cycles=25
 
 # Request generation

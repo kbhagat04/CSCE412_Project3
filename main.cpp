@@ -1,5 +1,4 @@
 // main.cpp
-// sets up the simulation from config/user input and runs it
 
 #include <iostream>
 #include <string>
@@ -7,7 +6,6 @@
 #include "IPBlocker.h"
 #include "LoadBalancer.h"
 
-// asks the user for an int, keeps the current value if they just hit enter
 void promptForInt(const std::string& prompt, int& value) {
     std::cout << prompt << " [" << value << "]: ";
     std::string input;
@@ -34,9 +32,9 @@ int main(int argc, char* argv[]) {
     promptForInt("Enter simulation time in clock cycles", config.simulationCycles);
 
     IPBlocker blocker;
-    for (const auto& range : config.blockedRanges) {
-        if (!blocker.addBlockedRange(range)) {
-            std::cerr << "[WARN] Invalid blocked range ignored: " << range << '\n';
+    for (int i = 0; i < (int)config.blockedRanges.size(); i++) {
+        if (!blocker.addBlockedRange(config.blockedRanges[i])) {
+            std::cerr << "[WARN] Invalid blocked range ignored: " << config.blockedRanges[i] << '\n';
         }
     }
 

@@ -17,8 +17,6 @@ struct Config {
     int simulationCycles = 10000;
     int initialQueueMultiplier = 100;
 
-    int minQueuePerServer = 50;
-    int maxQueuePerServer = 80;
     int scalingCooldownCycles = 25;
 
     int minRequestTime = 1;

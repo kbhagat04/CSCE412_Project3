@@ -1,5 +1,4 @@
 // Request.cpp
-// implements the Request struct methods
 
 #include "Request.h"
 #include <sstream>
@@ -22,7 +21,6 @@ Request Request::randomRequest(int nextId, std::mt19937& generator, int minTime,
 std::string Request::randomIp(std::mt19937& generator) {
     std::uniform_int_distribution<int> octetDist(0, 255);
     std::ostringstream stream;
-    stream << octetDist(generator) << '.' << octetDist(generator) << '.'
-           << octetDist(generator) << '.' << octetDist(generator);
+    stream << octetDist(generator) << '.' << octetDist(generator) << '.' << octetDist(generator) << '.' << octetDist(generator);
     return stream.str();
 }

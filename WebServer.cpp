@@ -1,5 +1,4 @@
 // WebServer.cpp
-// handles assigning requests and counting down each clock tick
 
 #include "WebServer.h"
 
@@ -15,7 +14,6 @@ bool WebServer::processRequest(Request* request) {
         return false;
     }
 
-    // copy the request so we own it
     currentRequest_ = new Request(*request);
     remainingTime_ = currentRequest_->timeRequired;
     isBusy_ = true;

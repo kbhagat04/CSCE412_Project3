@@ -1,5 +1,4 @@
 // Config.cpp
-// reads key=value pairs from a text file and fills in the Config struct
 
 #include "Config.h"
 #include <fstream>
@@ -47,10 +46,6 @@ bool ConfigLoader::loadFromFile(const std::string& path, Config& config) {
             config.simulationCycles = std::stoi(val);
         } else if (key == "initial_queue_multiplier") {
             config.initialQueueMultiplier = std::stoi(val);
-        } else if (key == "min_queue_per_server") {
-            config.minQueuePerServer = std::stoi(val);
-        } else if (key == "max_queue_per_server") {
-            config.maxQueuePerServer = std::stoi(val);
         } else if (key == "scaling_cooldown_cycles") {
             config.scalingCooldownCycles = std::stoi(val);
         } else if (key == "min_request_time") {
@@ -69,13 +64,10 @@ bool ConfigLoader::loadFromFile(const std::string& path, Config& config) {
         }
     }
 
-    if (config.minRequestTime < 1) {
+    if (config.minRequestTime < 1)
         config.minRequestTime = 1;
-    }
-    if (config.maxRequestTime < config.minRequestTime) {
+    if (config.maxRequestTime < config.minRequestTime)
         config.maxRequestTime = config.minRequestTime;
-    }
-    // no additional validation required
 
     return true;
 }
