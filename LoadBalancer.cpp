@@ -12,6 +12,9 @@
 #define YELLOW "\033[33m"
 #define RED    "\033[31m"
 
+const int MIN_QUEUE_PER_SERVER = 50;
+const int MAX_QUEUE_PER_SERVER = 80;
+
 // constructor - copy config, set up blocker, open log, seed RNG
 LoadBalancer::LoadBalancer(const Config& cfg, const IPBlocker& blocker) {
     config = cfg;
@@ -120,8 +123,7 @@ void LoadBalancer::balanceLoad() {
 
     int serverCount = (int)servers.size();
     int queueSize = (int)requestQueue.size();
-    const int MIN_QUEUE_PER_SERVER = 50;
-    const int MAX_QUEUE_PER_SERVER = 80;
+    
     int lowerThreshold = MIN_QUEUE_PER_SERVER * serverCount;
     int upperThreshold = MAX_QUEUE_PER_SERVER * serverCount;
 
@@ -203,8 +205,6 @@ SimulationStats LoadBalancer::run() {
     std::string qinfoMsg = "Initial queue: " + std::to_string(requestQueue.size()) + " requests | generated=" + std::to_string(stats.generatedRequests) + " | blocked=" + std::to_string(stats.blockedRequests) + " | accepted=" + std::to_string(stats.acceptedRequests);
     logInfo(qinfoMsg);
 
-    const int MAX_QUEUE_PER_SERVER = 80;
-    const int MIN_QUEUE_PER_SERVER = 50;
     int cap = (int)servers.size() * MAX_QUEUE_PER_SERVER;
     int fillPct = cap > 0 ? (int)(requestQueue.size() * 100 / cap) : 0;
     std::string capinfoMsg = "Queue capacity: " + std::to_string(cap) + " (" + std::to_string(MAX_QUEUE_PER_SERVER) + " per server) | fill=" + std::to_string(fillPct) + "%  [scale-up >" + std::to_string(MAX_QUEUE_PER_SERVER) + "/srv, scale-down <" + std::to_string(MIN_QUEUE_PER_SERVER) + "/srv]";
