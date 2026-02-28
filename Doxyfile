@@ -1,0 +1,21 @@
+PROJECT_NAME           = "CSCE 412 Project 3: Load Balancer Simulation"
+PROJECT_BRIEF          = "Dynamic web load balancer simulation in C++17"
+OUTPUT_DIRECTORY       = docs
+
+INPUT                  = .
+FILE_PATTERNS          = *.h *.cpp
+RECURSIVE              = NO
+
+EXTRACT_ALL            = YES
+EXTRACT_PRIVATE        = YES
+EXTRACT_STATIC         = YES
+
+GENERATE_HTML          = YES
+GENERATE_LATEX         = NO
+HTML_OUTPUT            = html
+
+SOURCE_BROWSER         = YES
+QUIET                  = YES
+WARN_IF_UNDOCUMENTED   = NO
+
+HAVE_DOT               = NO

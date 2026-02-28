@@ -12,7 +12,7 @@ scaling_cooldown_cycles=25
 
 # Request generation
 min_request_time=1
-max_request_time=15
+max_request_time=30
 
 
 # Logging and status

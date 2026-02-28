@@ -2,47 +2,61 @@
 
 #include "WebServer.h"
 
-WebServer::WebServer(const std::string& serverId)
-    : serverId_(serverId), isBusy_(false), remainingTime_(0), currentRequest_(nullptr), completedCount_(0) {}
-
-WebServer::~WebServer() {
-    delete currentRequest_;
+// set up a new server with the given ID
+WebServer::WebServer(const std::string& id) {
+    serverId = id;
+    isBusy = false;
+    remainingTime = 0;
+    currentRequest = nullptr;
+    completedRequests = 0;
 }
 
+// clean up any leftover request
+WebServer::~WebServer() {
+    delete currentRequest;
+}
+
+// take a request if the server is free, copy it and start processing
 bool WebServer::processRequest(Request* request) {
-    if (request == nullptr || isBusy_) {
+    if (request == nullptr || isBusy) {
         return false;
     }
 
-    currentRequest_ = new Request(*request);
-    remainingTime_ = currentRequest_->timeRequired;
-    isBusy_ = true;
+    currentRequest = new Request(*request);
+    remainingTime = currentRequest->timeRequired;
+    isBusy = true;
     return true;
 }
 
+// count down the timer, return true if the request just finished
 bool WebServer::processTick() {
-    if (!isBusy_) return false;
+    if (!isBusy) {
+        return false;
+    }
 
-    remainingTime_--;
-    if (remainingTime_ <= 0) {
-        delete currentRequest_;
-        currentRequest_ = nullptr;
-        isBusy_ = false;
-        completedCount_++;
+    remainingTime--;
+    if (remainingTime <= 0) {
+        delete currentRequest;
+        currentRequest = nullptr;
+        isBusy = false;
+        completedRequests++;
         return true;
     }
 
     return false;
 }
 
+// returns true if server has no active request
 bool WebServer::isAvailable() const {
-    return !isBusy_;
+    return !isBusy;
 }
 
+// getter for server ID
 std::string WebServer::id() const {
-    return serverId_;
+    return serverId;
 }
 
+// getter for how many requests this server has finished
 int WebServer::completedCount() const {
-    return completedCount_;
+    return completedRequests;
 }

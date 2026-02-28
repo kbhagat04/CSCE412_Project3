@@ -1,6 +1,7 @@
 // Config.cpp
 
 #include "Config.h"
+#include <cstdlib>
 #include <fstream>
 #include <sstream>
 #include <cctype>
@@ -20,54 +21,64 @@ static void parseBlockedRanges(const std::string& value, std::vector<std::string
     std::string item;
     while (std::getline(ss, item, ',')) {
         item = trim(item);
-        if (!item.empty())
+        if (!item.empty()) {
             ranges.push_back(item);
+        }
     }
 }
 
+// reads the config file line by line and sets matching fields
 bool ConfigLoader::loadFromFile(const std::string& path, Config& config) {
     std::ifstream file(path);
-    if (!file.is_open()) return false;
+    if (!file.is_open()) {
+        return false;
+    }
 
     std::string line;
     while (std::getline(file, line)) {
         line = trim(line);
-        if (line.empty() || line[0] == '#') continue;
+        if (line.empty() || line[0] == '#') {
+            continue;
+        }
 
         int eqPos = (int)line.find('=');
-        if (eqPos == (int)std::string::npos) continue;
+        if (eqPos == -1) {
+            continue;
+        }
 
         std::string key = trim(line.substr(0, eqPos));
         std::string val = trim(line.substr(eqPos + 1));
 
         if (key == "initial_servers") {
-            config.initialServers = std::stoi(val);
+            config.initialServers = atoi(val.c_str());
         } else if (key == "simulation_cycles") {
-            config.simulationCycles = std::stoi(val);
+            config.simulationCycles = atoi(val.c_str());
         } else if (key == "initial_queue_multiplier") {
-            config.initialQueueMultiplier = std::stoi(val);
+            config.initialQueueMultiplier = atoi(val.c_str());
         } else if (key == "scaling_cooldown_cycles") {
-            config.scalingCooldownCycles = std::stoi(val);
+            config.scalingCooldownCycles = atoi(val.c_str());
         } else if (key == "min_request_time") {
-            config.minRequestTime = std::stoi(val);
+            config.minRequestTime = atoi(val.c_str());
         } else if (key == "max_request_time") {
-            config.maxRequestTime = std::stoi(val);
+            config.maxRequestTime = atoi(val.c_str());
         } else if (key == "status_print_interval") {
-            config.statusPrintInterval = std::stoi(val);
+            config.statusPrintInterval = atoi(val.c_str());
         } else if (key == "log_file") {
             config.logFilePath = val;
         } else if (key == "seed") {
-            config.seed = (unsigned int)std::stoul(val);
+            config.seed = (unsigned int)atoi(val.c_str());
         } else if (key == "blocked_ranges") {
             config.blockedRanges.clear();
             parseBlockedRanges(val, config.blockedRanges);
         }
     }
 
-    if (config.minRequestTime < 1)
+    if (config.minRequestTime < 1) {
         config.minRequestTime = 1;
-    if (config.maxRequestTime < config.minRequestTime)
+    }
+    if (config.maxRequestTime < config.minRequestTime) {
         config.maxRequestTime = config.minRequestTime;
+    }
 
     return true;
 }

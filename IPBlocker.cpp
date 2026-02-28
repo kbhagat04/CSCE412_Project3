@@ -1,9 +1,10 @@
 // IPBlocker.cpp
 
 #include "IPBlocker.h"
+#include <cstdlib>
 #include <sstream>
-#include <algorithm>
 
+// converts a dotted IP string like "10.0.0.1" into a 32-bit int
 bool IPBlocker::parseIp(const std::string& ip, uint32_t& value) {
     std::stringstream ss(ip);
     std::string token;
@@ -22,7 +23,7 @@ bool IPBlocker::parseIp(const std::string& ip, uint32_t& value) {
             }
         }
 
-        int octet = std::stoi(token);
+        int octet = atoi(token.c_str());
         if (octet < 0 || octet > 255) {
             return false;
         }
@@ -37,6 +38,7 @@ bool IPBlocker::parseIp(const std::string& ip, uint32_t& value) {
     return true;
 }
 
+// adds a blocked range given explicit start and end IPs
 bool IPBlocker::addBlockedRange(const std::string& startIp, const std::string& endIp) {
     uint32_t startVal = 0, endVal = 0;
 
@@ -45,28 +47,31 @@ bool IPBlocker::addBlockedRange(const std::string& startIp, const std::string& e
     }
 
     if (startVal > endVal) {
-        std::swap(startVal, endVal);
+        uint32_t temp = startVal;
+        startVal = endVal;
+        endVal = temp;
     }
 
     IpRange r;
     r.start = startVal;
     r.end = endVal;
-    ranges_.push_back(r);
+    ranges.push_back(r);
     return true;
 }
 
+// parses a range string (CIDR or dash format) and adds it
 bool IPBlocker::addBlockedRange(const std::string& spec) {
     // range format: "1.2.3.4-5.6.7.8"
-    size_t dashPos = spec.find('-');
-    if (dashPos != std::string::npos) {
+    int dashPos = (int)spec.find('-');
+    if (dashPos != -1) {
         return addBlockedRange(spec.substr(0, dashPos), spec.substr(dashPos + 1));
     }
 
     // CIDR format: "10.0.0.0/8"
-    size_t slashPos = spec.find('/');
-    if (slashPos != std::string::npos) {
+    int slashPos = (int)spec.find('/');
+    if (slashPos != -1) {
         std::string ipPart = spec.substr(0, slashPos);
-        int prefixLen = std::stoi(spec.substr(slashPos + 1));
+        int prefixLen = atoi(spec.substr(slashPos + 1).c_str());
 
         if (prefixLen < 0 || prefixLen > 32) {
             return false;
@@ -89,21 +94,22 @@ bool IPBlocker::addBlockedRange(const std::string& spec) {
         IpRange r;
         r.start = startVal;
         r.end = endVal;
-        ranges_.push_back(r);
+        ranges.push_back(r);
         return true;
     }
 
     return addBlockedRange(spec, spec);
 }
 
+// returns true if the given IP falls inside any blocked range
 bool IPBlocker::isBlocked(const std::string& ip) const {
     uint32_t ipVal = 0;
     if (!parseIp(ip, ipVal)) {
         return true;
     }
 
-    for (int i = 0; i < (int)ranges_.size(); i++) {
-        if (ipVal >= ranges_[i].start && ipVal <= ranges_[i].end) {
+    for (int i = 0; i < (int)ranges.size(); i++) {
+        if (ipVal >= ranges[i].start && ipVal <= ranges[i].end) {
             return true;
         }
     }

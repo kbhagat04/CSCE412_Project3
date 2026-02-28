@@ -1,12 +1,21 @@
-// LoadBalancer.h
-// main class for the simulation - handles the server pool, request queue, scaling, and logging
+/**
+ * @file LoadBalancer.h
+ * @brief Defines the LoadBalancer class and SimulationStats struct used to
+ *        drive and report on the entire load balancer simulation.
+ *
+ * The LoadBalancer owns a pool of WebServer objects, a FIFO request queue,
+ * an IP firewall (IPBlocker), and an output log file. Each call to run()
+ * executes the full simulation and returns a SimulationStats summary.
+ *
+ * @author Karan Bhagat
+ * @date 2026
+ */
 
 #ifndef LOADBALANCER_H
 #define LOADBALANCER_H
 
 #include <fstream>
 #include <queue>
-#include <random>
 #include <string>
 #include <vector>
 
@@ -17,99 +26,171 @@
 
 /**
  * @struct SimulationStats
- * @brief Tracks numbers we care about after the simulation finishes.
+ * @brief Aggregated counters collected during a simulation run.
+ *
+ * An instance of this struct is returned by LoadBalancer::run() and is
+ * used both for in-log summaries and for the terminal report printed by
+ * main().
  */
 struct SimulationStats {
-    int generatedRequests = 0;
-    int acceptedRequests = 0;
-    int blockedRequests = 0;
-    int completedRequests = 0;
-    int addedServers = 0;
-    int removedServers = 0;
-    int peakQueueSize = 0;
-    int finalQueueSize = 0;
-    int finalServerCount = 0;
+    int generatedRequests;  ///< Total requests created (includes blocked ones).
+    int acceptedRequests;   ///< Requests that passed the firewall and entered the queue.
+    int blockedRequests;    ///< Requests rejected by the IPBlocker firewall.
+    int completedRequests;  ///< Requests that finished processing on a server.
+    int addedServers;       ///< Number of scale-up events (servers added).
+    int removedServers;     ///< Number of scale-down events (servers removed).
+    int peakQueueSize;      ///< Largest queue depth observed across all cycles.
+    int finalQueueSize;     ///< Queue depth at the end of the last cycle.
+    int finalServerCount;   ///< Number of active servers when the simulation ended.
+
+    SimulationStats() {
+        generatedRequests = 0;
+        acceptedRequests = 0;
+        blockedRequests = 0;
+        completedRequests = 0;
+        addedServers = 0;
+        removedServers = 0;
+        peakQueueSize = 0;
+        finalQueueSize = 0;
+        finalServerCount = 0;
+    }
 };
 
 /**
  * @class LoadBalancer
- * @brief Main class for the simulation. Manages servers, queue, scaling, and logging.
+ * @brief Core simulation class that manages the server pool, request queue,
+ *        auto-scaling logic, firewall checks, and log output.
+ *
+ * On construction the LoadBalancer receives a Config struct (settings) and
+ * an IPBlocker (firewall). Calling run() initializes the server pool, fills
+ * an initial queue, then steps through every simulation cycle. At each cycle
+ * the balancer:
+ *  -# Optionally generates new incoming requests via randomAddNewRequests().
+ *  -# Dispatches queued requests to idle servers and ticks all busy servers
+ *     (processTick()).
+ *  -# Evaluates whether to scale up or scale down the server pool
+ *     (balanceLoad()).
+ *
+ * All notable events are written to the log file with color-coded tags.
  */
 class LoadBalancer {
 public:
     /**
-     * @brief Sets up the load balancer with config settings and a firewall blocker.
-     * @param config Settings to use.
-     * @param blocker IPBlocker to check incoming IPs against.
+     * @brief Constructs the LoadBalancer and opens the log file.
+     * @param config  Simulation settings (server count, cycle count, etc.).
+     * @param blocker Firewall object used to validate incoming request IPs.
      */
     LoadBalancer(const Config& config, const IPBlocker& blocker);
 
     /**
-     * @brief Destructor - cleans up server pointers and closes log file.
+     * @brief Destructor. Frees all dynamically allocated WebServer objects
+     *        and closes the log file.
      */
     ~LoadBalancer();
 
     /**
-     * @brief Adds a request to the queue (if not blocked by firewall).
-     * @param request The request to add.
+     * @brief Attempts to enqueue an incoming request.
+     *
+     * The source IP is checked against the IPBlocker. Blocked requests are
+     * logged with a @c [BLOCK] tag and counted in stats. Accepted requests
+     * are pushed onto the FIFO queue.
+     *
+     * @param request The Request to enqueue.
      */
     void addRequest(const Request& request);
 
     /**
-     * @brief Runs one clock cycle - dispatches requests and ticks all servers.
-     */
-    void processTick();
-
-    /**
-     * @brief Checks queue size and adds/removes servers as needed.
-     */
-    void balanceLoad();
-
-    /**
-     * @brief Spins up a new WebServer and adds it to the pool.
+     * @brief Allocates a new WebServer and appends it to the server pool.
      */
     void addServer();
 
     /**
-     * @brief Removes an idle server to save capacity.
-     * @return true if a server was removed.
+     * @brief Removes an idle server from the pool to free capacity.
+     * @return @c true if an idle server was found and removed;
+     *         @c false if all servers are currently busy.
      */
     bool removeServer();
 
     /**
-     * @brief Logs an info message to terminal and log file.
-     * @param event Message to log.
+     * @brief Evaluates queue depth and adjusts the server pool size.
+     *
+     * Uses per-server thresholds (hard-coded as local constants):
+     * - Scale up  when queue depth exceeds MAX_QUEUE_PER_SERVER × servers.
+     * - Scale down when queue depth falls below MIN_QUEUE_PER_SERVER × servers
+     *   AND the scaling cooldown timer has expired.
      */
-    void logEvent(const std::string& event);
+    void balanceLoad();
 
     /**
-     * @brief Runs the whole simulation and returns final stats.
-     * @return SimulationStats with totals for the run.
+     * @brief Executes one simulation clock cycle.
+     *
+     * Iterates over all servers: idle servers receive the next queued
+     * request (if any); busy servers are ticked and their completion
+     * counter is updated when they finish.
+     */
+    void processTick();
+
+    /**
+     * @brief Runs the complete simulation from start to finish.
+     *
+     * Initializes the server pool and request queue, then iterates for
+     * Config::simulationCycles cycles. On completion writes a summary
+     * block to the log file.
+     *
+     * @return A SimulationStats struct containing final counters for the run.
      */
     SimulationStats run();
 
 private:
-    Config config_;
-    IPBlocker* ipBlocker_;
-    std::ofstream logFile_;
-    std::queue<Request> requestQueue_;
-    std::vector<WebServer*> servers_;
-    std::mt19937 generator_;
+    Config config;                      ///< Copy of the simulation configuration.
+    IPBlocker* ipBlocker;               ///< Pointer to the firewall/IP blocker.
+    std::ofstream logFile;              ///< Output stream for the simulation log.
+    std::queue<Request> requestQueue;   ///< FIFO queue of pending requests.
+    std::vector<WebServer*> servers;    ///< Pool of dynamically allocated servers.
 
-    int currentTime_ = 0;
-    int nextRequestId_ = 1;
-    int cooldownTimer_ = 0;
-    SimulationStats stats_;
+    int currentTime;      ///< Current simulation cycle number (1-based).
+    int nextRequestId;    ///< Auto-incrementing ID counter for new requests.
+    int cooldownTimer;    ///< Cycles remaining before the next scale-down is allowed.
+    SimulationStats stats;///< Accumulates counters as the simulation runs.
 
+    /**
+     * @brief Creates a new randomised Request using the current ID counter.
+     * @return A fully populated Request ready for queuing.
+     */
+    Request generateRequest();
+
+    /** @brief Creates Config::initialServers WebServer objects at simulation start. */
     void initializeServers();
+
+    /**
+     * @brief Pre-fills the request queue before the main loop begins.
+     *
+     * Target depth is initialServers * initialQueueMultiplier. Requests are
+     * generated until that depth is reached or the firewall rejects them.
+     */
     void fillInitialQueue();
-    void maybeAddNewRequests();
-    void logInfo(const std::string& message);
-    void logWarning(const std::string& message);
-    void logError(const std::string& message);
+
+    /**
+     * @brief Randomly injects new requests during the main simulation loop.
+     *
+     * Called once per cycle. Uses rand() to decide whether 0, 1, or 2 new
+     * requests should arrive this cycle.
+     */
+    void randomAddNewRequests();
+
+    /**
+     * @brief Core log-write helper used by all logging methods.
+     * @param level     Tag string (e.g. "INFO", "BLOCK", "SCALE UP").
+     * @param colorCode ANSI escape code for terminal color (unused in file output).
+     * @param message   Log message body.
+     */
     void writeLog(const std::string& level, const std::string& colorCode, const std::string& message);
 
-    Request generateRequest();
+    /**
+     * @brief Writes an informational message to the log file with the [INFO] tag.
+     * @param message Text to write.
+     */
+    void logInfo(const std::string& message);
 };
 
 #endif
